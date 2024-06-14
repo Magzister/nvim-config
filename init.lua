@@ -10,6 +10,7 @@ vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
 vim.opt.autoindent = true
 vim.opt.fileformat = "unix"
+vim.opt.colorcolumn = "79"
 
 local plugins = {
     --lsp
@@ -28,6 +29,14 @@ local plugins = {
     {
         "L3MON4D3/LuaSnip"
     },
+    {
+        "ray-x/lsp_signature.nvim",
+        event = "VeryLazy",
+        opts = {},
+        config = function(_, opts)
+            require("lsp_signature").setup(opts)
+        end
+    },
 
     --color theme and transparent for nvim
     {
@@ -37,7 +46,30 @@ local plugins = {
         "ellisonleao/gruvbox.nvim",
         priority = 1000 ,
         config = true,
-    }
+    },
+    --telescope
+    {
+        'nvim-telescope/telescope.nvim', tag = '0.1.5',
+        dependencies = { 'nvim-lua/plenary.nvim' }
+    },
+    {
+        'nvim-telescope/telescope-fzf-native.nvim',
+        build = 'cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build'
+    },
+    {
+        "nvim-treesitter/nvim-treesitter",
+        build = ":TSUpdate",
+        config = function ()
+          local configs = require("nvim-treesitter.configs")
+
+          configs.setup({
+            ensure_installed = { "c", "lua", "vim", "vimdoc", "query", "markdown", "python", "cpp" },
+            sync_install = false,
+            highlight = { enable = true },
+            indent = { enable = true },  
+          })
+       end
+    },
 }
 
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
@@ -94,10 +126,21 @@ local on_attach = function(_, bufnr)
   vim.keymap.set('n', '<space>f', function()
     vim.lsp.buf.format { async = true }
   end, opts)
+
+  require "lsp_signature".on_attach({
+      bind = true, -- This is mandatory, otherwise border config won't get registered.
+      floating_window = true,
+      floating_window_above_cur_line = true,
+      floating_window_off_x = 20,
+      doc_lines = 10,
+      hint_prefix = '👻 '
+  }, bufnr)  -- Note: add in lsp client on-attach
 end
 
 -- Enable some language servers with the additional completion capabilities offered by nvim-cmp
-local servers = { 'clangd', 'pyright', 'lua_ls' }
+-- local servers = { 'clangd', 'pyright', 'lua_ls' }
+local servers = {}
+--local servers = {}
 for _, lsp in ipairs(servers) do
   lspconfig[lsp].setup {
     on_attach = on_attach,
@@ -154,3 +197,10 @@ local map = vim.api.nvim_set_keymap
 local options = { noremap = true }
 map('n', 'gp', ':bp<cr>', options)
 map('n', 'gn', ':bn<cr>', options)
+
+vim.api.nvim_set_var('netrw_banner', 0)
+vim.api.nvim_set_var('netrw_liststyle', 3)
+vim.api.nvim_set_var('netrw_browse_split', 3)
+
+vim.api.nvim_set_keymap('n', ',ff', '<cmd>Telescope find_files<cr>', { noremap=true })
+vim.api.nvim_set_keymap('n', ',fg', '<cmd>Telescope find_grep<cr>', { noremap=true })
